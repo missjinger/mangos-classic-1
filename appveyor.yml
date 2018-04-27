@@ -17,7 +17,7 @@ environment:
   BOOST_LIBRARYDIR_WIN64: C:\Libraries\boost_1_63_0\lib64-msvc-14.0
   SNAPSHOT_TAG: "Last_$(APPVEYOR_PROJECT_NAME)_PreBuild"
   SEC_ACCESS_TOKEN:
-        secure: GXsXxwHSSt1y+ae3C6A0csN+dCQxPW8w98SGwl8cqzqPDhKKbvFJ37eJCCDeNIm2
+        secure: NDeANcjsh/MqWKRbjM8ik2WS7V0/kEdXCGeMwnKqnXnai5G8t+FwIpYgi996sIGu
 
 # build configuration, i.e. Debug, Release, etc.
 configuration:
@@ -59,7 +59,7 @@ clone_folder: C:\projects\cmangos
 branches:
   # whitelist
   only:
-    - master
+    - build_branch
 
 # Do not build on tags (GitHub only)
 skip_tags: true
@@ -103,5 +103,5 @@ deploy:
     draft: false
     prerelease: true
     on:
-      branch: master                # release from master branch only
+      branch: build_branch          # release from master branch only
       appveyor_repo_tag: false      # deploy on tag push only
