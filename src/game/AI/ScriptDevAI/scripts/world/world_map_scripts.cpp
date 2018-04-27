@@ -209,8 +209,9 @@ struct world_map_kalimdor : public ScriptedMap
         {
             if (!instance)
             {
-                debug_log("SD2: no instance found with uiIndex: %u for guid %u", uiIndex, uint32(*itr)); 
+                debug_log("SD2: NO instance FOUND with uiIndex: %u for guid %u", uiIndex, uint32(*itr)); 
             }
+            debug_log("SD2: instance FOUND with uiIndex: %u for guid %u", uiIndex, uint32(*itr)); 
             if (GameObject* pRift = instance->GetGameObject(*itr))
             {
                 m_luiElementalRiftGUIDs[uiIndex].remove(*itr);
