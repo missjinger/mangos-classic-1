@@ -206,18 +206,28 @@ struct world_map_kalimdor : public ScriptedMap
     void DoDespawnElementalRifts(uint8 uiIndex)
     {
         // Despawn all GO rifts for a given element type, erase the GUIDs for the GOs
-        for (GuidList::const_iterator itr = m_luiElementalRiftGUIDs[uiIndex].begin(); itr != m_luiElementalRiftGUIDs[uiIndex].end(); ++itr)
+   //     for (GuidList::const_iterator itr = m_luiElementalRiftGUIDs[uiIndex].begin(); itr != m_luiElementalRiftGUIDs[uiIndex].end(); ++itr)
+        for (auto guid : GuidList)
         {
             if (!instance)
             {
-                debug_log("SD2: NO instance FOUND with uiIndex: %u for guid %u", uiIndex, uint32(*itr)); 
+                debug_log("SD2: NO instance FOUND with uiIndex: %u for guid %u", uiIndex, guid); 
             }
-            debug_log("SD2: instance FOUND with uiIndex: %u for guid %u", uiIndex, uint32(*itr)); 
-            if (GameObject* pRift = instance->GetGameObject(*itr))
+            
+            if (!guid)
+                debug_log("SD2: instance FOUND with uiIndex: %u but NO guid", uiIndex); 
+
+            debug_log("SD2: instance FOUND with uiIndex: %u for guid %u", uiIndex, guid); 
+            if (GameObject* pRift = instance->GetGameObject(guid))
+            {
+                m_luiElementalRiftGUIDs[uiIndex].remove(guid);
+                pRift->SetLootState(GO_JUST_DEACTIVATED);
+            }
+ /*           if (GameObject* pRift = instance->GetGameObject(*itr))
             {
                 m_luiElementalRiftGUIDs[uiIndex].remove(*itr);
                 pRift->SetLootState(GO_JUST_DEACTIVATED);
-            }
+            }*/
         }
     }
 
