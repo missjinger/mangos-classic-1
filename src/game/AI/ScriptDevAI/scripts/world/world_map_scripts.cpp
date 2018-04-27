@@ -87,6 +87,7 @@ struct world_map_kalimdor : public ScriptedMap
         m_uiOmenMoonlightTimer = 0;
         m_uiRocketsCounter = 0;
         b_isOmenSpellCreditDone = false;
+        m_luiElementalRiftGUIDs.clear();
     }
 
     void OnCreatureCreate(Creature* pCreature)
@@ -220,7 +221,7 @@ struct world_map_kalimdor : public ScriptedMap
             if (!(guid.IsGameObject()))
             {
                 debug_log("SD2: instance FOUND with uiIndex: %u for guid %u but guid is NOT GO", uiIndex, guid);
-                return;
+               // return;
             }
             debug_log("SD2: instance FOUND with uiIndex: %u for guid %u", uiIndex, guid); 
             if (GameObject* pRift = instance->GetGameObject(guid))
