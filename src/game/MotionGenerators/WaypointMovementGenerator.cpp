@@ -350,7 +350,7 @@ void FlightPathMovementGenerator::LoadPath(Player& player)
     for (uint32 src = 0, dst = 1; dst < taxi.size(); src = dst++)
     {
         uint32 path, cost;
-        sObjectMgr.GetTaxiPath(taxi[src], taxi[dst], path, cost);
+        sObjectMgr.GetTaxiPath(taxi[src], taxi[dst], path, cost); // Need to add support for reputation cost discount
         if (path > sTaxiPathNodesByPath.size())
             return;
 
@@ -394,7 +394,7 @@ void FlightPathMovementGenerator::Finalize(Player& player)
     player.clearUnitState(UNIT_STAT_TAXI_FLIGHT);
 
     player.Unmount();
-    player.RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_MOVING_DEPRECATED | UNIT_FLAG_TAXI_FLIGHT);
+    player.RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_CLIENT_CONTROL_LOST | UNIT_FLAG_TAXI_FLIGHT);
     player.UpdateClientControl(&player, true);
 
     if (player.m_taxi.GetLastNode() == player.m_taxi.GetFinalTaxiDestination())
@@ -431,7 +431,7 @@ void FlightPathMovementGenerator::Reset(Player& player)
     player.getHostileRefManager().setOnlineOfflineState(false);
     player.addUnitState(UNIT_STAT_TAXI_FLIGHT);
     player.UpdateClientControl(&player, false);
-    player.SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_MOVING_DEPRECATED | UNIT_FLAG_TAXI_FLIGHT);
+    player.SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_CLIENT_CONTROL_LOST | UNIT_FLAG_TAXI_FLIGHT);
 
     Movement::MoveSplineInit init(player);
     uint32 end = GetPathAtMapEnd();

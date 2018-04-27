@@ -757,6 +757,21 @@ void ScriptMgr::LoadScripts(ScriptMapMapName& scripts, const char* tablename)
                 }
                 break;
             }
+            case SCRIPT_COMMAND_CAST_CUSTOM_SPELL:          // 46
+            {
+                if (!sSpellTemplate.LookupEntry<SpellEntry>(tmp.castSpell.spellId))
+                {
+                    sLog.outErrorDb("Table `%s` using nonexistent spell (id: %u) in SCRIPT_COMMAND_CAST_CUSTOM_SPELL for script id %u",
+                        tablename, tmp.castSpell.spellId, tmp.id);
+                    continue;
+                }
+                if (tmp.textId[0] == 0 && tmp.textId[1] == 0 && tmp.textId[2] == 0)
+                {
+                    sLog.outErrorDb("Table `%s` has invalid BP values (dataint = %u, dataint2 = %u, dataint3 = %u) in SCRIPT_COMMAND_CAST_CUSTOM_SPELL for script id %u. At least one field has to be populated.", tablename, tmp.textId[0], tmp.textId[1], tmp.textId[2], tmp.id);
+                    continue;
+                }
+                break;
+            }
             default:
             {
                 sLog.outErrorDb("Table `%s` unknown command %u, skipping.", tablename, tmp.command);
@@ -1673,15 +1688,13 @@ bool ScriptAction::HandleScriptStep()
             // TODO: when GO cast implemented, code below must be updated accordingly to also allow GO spell cast
             if (pSource && pSource->GetTypeId() == TYPEID_GAMEOBJECT)
             {
-                ((Unit*)pTarget)->CastSpell(((Unit*)pTarget), spell, TRIGGERED_OLD_TRIGGERED, nullptr, nullptr, pSource->GetObjectGuid());
+                ((Unit*)pTarget)->CastSpell(((Unit*)pTarget), spell, TRIGGERED_OLD_TRIGGERED | TRIGGERED_DO_NOT_PROC, nullptr, nullptr, pSource->GetObjectGuid());
                 break;
             }
 
             if (LogIfNotUnit(pSource))
                 break;
-
-            ((Unit*)pSource)->CastSpell(((Unit*)pTarget), spell, m_script->castSpell.castFlags);
-
+            ((Unit*)pSource)->CastSpell(((Unit*)pTarget), spell, m_script->castSpell.castFlags | TRIGGERED_DO_NOT_PROC);
             break;
         }
         case SCRIPT_COMMAND_PLAY_SOUND:                     // 16
@@ -2127,13 +2140,13 @@ bool ScriptAction::HandleScriptStep()
                 pCSource->SetFacingTo(o);
 
                 if (m_script->data_flags & SCRIPT_FLAG_COMMAND_ADDITIONAL && !pCSource->isInCombat())
-                    pCSource->SetTargetGuid(ObjectGuid());
+                    pCSource->SetTarget(nullptr);
             }
             else
             {
                 pCSource->SetFacingToObject(pTarget);
                 if (m_script->data_flags & SCRIPT_FLAG_COMMAND_ADDITIONAL && !LogIfNotUnit(pTarget) && !pCSource->isInCombat())
-                    pCSource->SetTargetGuid(pTarget->GetObjectGuid());
+                    pCSource->SetTarget(pTarget);
             }
             break;
         }
@@ -2291,6 +2304,16 @@ bool ScriptAction::HandleScriptStep()
 
             if (chosenId)
                 m_map->ScriptsStart(sRelayScripts, chosenId, pSource, pTarget);
+            break;
+        }
+        case SCRIPT_COMMAND_CAST_CUSTOM_SPELL:              // 46
+        {
+            if (LogIfNotUnit(pTarget))
+                break;
+            if (LogIfNotUnit(pSource))
+                break;
+
+            ((Unit*)pSource)->CastCustomSpell((Unit*)pTarget, m_script->castCustomSpell.spellId, &m_script->textId[0], &m_script->textId[1], &m_script->textId[2], m_script->castCustomSpell.castFlags);
             break;
         }
         default:

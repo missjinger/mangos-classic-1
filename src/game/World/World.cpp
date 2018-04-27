@@ -90,6 +90,7 @@ float  World::m_relocation_lower_limit_sq     = 10.f * 10.f;
 uint32 World::m_relocation_ai_notify_delay    = 1000u;
 
 TimePoint World::m_currentTime = TimePoint();
+uint32 World::m_currentDiff = 0;
 
 /// World constructor
 World::World(): mail_timer(0), mail_timer_expires(0)
@@ -211,6 +212,8 @@ World::AddSession_(WorldSession* s)
             // prevent decrease sessions count if session queued
             if (RemoveQueuedSession(old->second))
                 decrease_session = false;
+            // do not remove replaced session from queue if listed
+            delete old->second;
         }
     }
 
@@ -1355,6 +1358,7 @@ void World::DetectDBCLang()
 void World::Update(uint32 diff)
 {
     m_currentTime = std::chrono::time_point_cast<std::chrono::milliseconds>(Clock::now());
+    m_currentDiff = diff;
 
     ///- Update the different timers
     for (int i = 0; i < WUPDATE_COUNT; ++i)
@@ -1538,6 +1542,29 @@ void World::SendWorldText(int32 string_id, ...)
             Player* player = session->GetPlayer();
             if (player && player->IsInWorld())
                 wt_do(player);
+        }
+    }
+
+    va_end(ap);
+}
+
+/// Sends a system message to all given security level and above
+void World::SendWorldTextToAboveSecurity(uint32 securityLevel, int32 string_id, ...)
+{
+    va_list ap;
+    va_start(ap, string_id);
+
+    MaNGOS::WorldWorldTextBuilder wt_builder(string_id, &ap);
+    MaNGOS::LocalizedPacketListDo<MaNGOS::WorldWorldTextBuilder> wt_do(wt_builder);
+    for (SessionMap::const_iterator itr = m_sessions.begin(); itr != m_sessions.end(); ++itr)
+    {
+        if (WorldSession* session = itr->second)
+        {
+            Player* player = session->GetPlayer();
+            if (player && player->IsInWorld())
+                if (WorldSession* session = player->GetSession())
+                    if (uint32(session->GetSecurity()) >= securityLevel)
+                        wt_do(player);
         }
     }
 

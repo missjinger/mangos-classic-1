@@ -470,6 +470,7 @@ class World
         void LoadSpamRecords(bool reload = false);
 
         void SendWorldText(int32 string_id, ...);
+        void SendWorldTextToAboveSecurity(uint32 securityLevel, int32 string_id, ...);
         void SendGlobalMessage(WorldPacket const& packet) const;
         void SendServerMessage(ServerMessageType type, const char* text = "", Player* player = nullptr) const;
         void SendZoneUnderAttackMessage(uint32 zoneId, Team team);
@@ -564,6 +565,7 @@ class World
         void InvalidatePlayerDataToAllClient(ObjectGuid guid) const;
 
         static TimePoint GetCurrentClockTime() { return m_currentTime; }
+        static uint32 GetCurrentDiff() { return m_currentDiff; }
 
     protected:
         void _UpdateGameTime();
@@ -654,6 +656,7 @@ class World
         std::vector<std::string> m_spamRecords;
 
         static TimePoint m_currentTime;
+        static uint32 m_currentDiff;
 };
 
 extern uint32 realmID;

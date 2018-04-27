@@ -135,7 +135,7 @@ Creature::Creature(CreatureSubtype subtype) : Unit(),
     m_AlreadyCallAssistance(false), m_AlreadySearchedAssistance(false),
     m_isDeadByDefault(false), m_temporaryFactionFlags(TEMPFACTION_NONE),
     m_meleeDamageSchoolMask(SPELL_SCHOOL_MASK_NORMAL), m_originalEntry(0),
-    m_creatureInfo(nullptr), m_ai(nullptr)
+    m_creatureInfo(nullptr), m_ai(nullptr), m_ignoreRangedTargets(false)
 {
     m_regenTimer = 200;
     m_valuesCount = UNIT_END;
@@ -190,14 +190,8 @@ void Creature::RemoveFromWorld()
 
 void Creature::RemoveCorpse(bool inPlace)
 {
-    if (!inPlace)
-    {
-        // since pool system can fail to roll unspawned object, this one can remain spawned, so must set respawn nevertheless
-        if (uint16 poolid = sPoolMgr.IsPartOfAPool<Creature>(GetGUIDLow()))
-            sPoolMgr.UpdatePool<Creature>(*GetMap()->GetPersistentState(), poolid, GetGUIDLow());
-        if (!IsInWorld())                            // can be despawned by update pool
-            return;
-    }
+    if (!inPlace && !IsInWorld())
+       return;
 
     if ((getDeathState() != CORPSE && !m_isDeadByDefault) || (getDeathState() != ALIVE && m_isDeadByDefault))
         return;
@@ -358,6 +352,7 @@ bool Creature::InitEntry(uint32 Entry, Team team, CreatureData const* data /*=nu
 
     // checked at loading
     m_defaultMovementType = MovementGeneratorType(cinfo->MovementType);
+    SetMeleeDamageSchool(SpellSchools(cinfo->DamageSchool));
 
     SetCanParry(!(cinfo->ExtraFlags & CREATURE_EXTRA_FLAG_NO_PARRY));
     SetCanBlock(!(cinfo->ExtraFlags & CREATURE_EXTRA_FLAG_NO_BLOCK));
@@ -549,6 +544,9 @@ void Creature::Update(uint32 update_diff, uint32 diff)
                     GetMap()->GetCreatureLinkingHolder()->DoCreatureLinkingEvent(LINKING_EVENT_RESPAWN, this);
 
                 GetMap()->Add(this);
+
+                if (uint16 poolid = sPoolMgr.IsPartOfAPool<Creature>(GetGUIDLow()))
+                    sPoolMgr.UpdatePool<Creature>(*GetMap()->GetPersistentState(), poolid, GetGUIDLow());
             }
             break;
         }
@@ -1175,6 +1173,9 @@ void Creature::SelectLevel(uint32 forcedLevel /*= USE_DEFAULT_DATABASE_LEVEL*/)
     float maxRangedDmg = 0.f;
     float meleeAttackPwr = 0.f;
     float rangedAttackPwr = 0.f;
+
+    float damageMod = _GetDamageMod(rank);
+    float damageMulti = cinfo->DamageMultiplier * damageMod;
     bool usedDamageMulti = false;
 
     if (CreatureClassLvlStats const* cCLS = sObjectMgr.GetCreatureClassLvlStats(level, cinfo->UnitClass))
@@ -1197,12 +1198,12 @@ void Creature::SelectLevel(uint32 forcedLevel /*= USE_DEFAULT_DATABASE_LEVEL*/)
         if (cinfo->DamageMultiplier >= 0)
         {
             usedDamageMulti = true;
-            mainMinDmg = ((cCLS->BaseDamage * cinfo->DamageVariance) + (cCLS->BaseMeleeAttackPower / 14.0f)) * (cinfo->MeleeBaseAttackTime / 1000.0f) * cinfo->DamageMultiplier;
-            mainMaxDmg = ((cCLS->BaseDamage * cinfo->DamageVariance *1.5f) + (cCLS->BaseMeleeAttackPower / 14.0f)) * (cinfo->MeleeBaseAttackTime / 1000.0f) * cinfo->DamageMultiplier;
+            mainMinDmg = ((cCLS->BaseDamage * cinfo->DamageVariance) + (cCLS->BaseMeleeAttackPower / 14.0f)) * (cinfo->MeleeBaseAttackTime / 1000.0f) * damageMulti;
+            mainMaxDmg = ((cCLS->BaseDamage * cinfo->DamageVariance *1.5f) + (cCLS->BaseMeleeAttackPower / 14.0f)) * (cinfo->MeleeBaseAttackTime / 1000.0f) * damageMulti;
             offMinDmg = mainMinDmg / 2.0f;
             offMaxDmg = mainMinDmg / 2.0f;
-            minRangedDmg = ((cCLS->BaseDamage * cinfo->DamageVariance) + (cCLS->BaseRangedAttackPower / 14.0f)) * (cinfo->RangedBaseAttackTime / 1000.0f) * cinfo->DamageMultiplier;
-            maxRangedDmg = ((cCLS->BaseDamage * cinfo->DamageVariance * 1.5f) + (cCLS->BaseRangedAttackPower / 14.0f)) * (cinfo->RangedBaseAttackTime / 1000.0f) * cinfo->DamageMultiplier;
+            minRangedDmg = ((cCLS->BaseDamage * cinfo->DamageVariance) + (cCLS->BaseRangedAttackPower / 14.0f)) * (cinfo->RangedBaseAttackTime / 1000.0f) * damageMulti;
+            maxRangedDmg = ((cCLS->BaseDamage * cinfo->DamageVariance * 1.5f) + (cCLS->BaseRangedAttackPower / 14.0f)) * (cinfo->RangedBaseAttackTime / 1000.0f) * damageMulti;
 
             // attack power (not sure about the next line)
             meleeAttackPwr = cCLS->BaseMeleeAttackPower;
@@ -1240,17 +1241,16 @@ void Creature::SelectLevel(uint32 forcedLevel /*= USE_DEFAULT_DATABASE_LEVEL*/)
             // damage
             if (!usedDamageMulti)
             {
-                float damagemod = _GetDamageMod(rank);
-                mainMinDmg = cinfo->MinMeleeDmg * damagemod;
-                mainMaxDmg = cinfo->MaxMeleeDmg * damagemod;
-                offMinDmg = cinfo->MinMeleeDmg * damagemod;
-                offMaxDmg = cinfo->MaxMeleeDmg * damagemod;
-                minRangedDmg = cinfo->MinRangedDmg * damagemod;
-                maxRangedDmg = cinfo->MaxRangedDmg * damagemod;
+                mainMinDmg = cinfo->MinMeleeDmg * damageMulti;
+                mainMaxDmg = cinfo->MaxMeleeDmg * damageMulti;
+                offMinDmg = cinfo->MinMeleeDmg * damageMulti;
+                offMaxDmg = cinfo->MaxMeleeDmg * damageMulti;
+                minRangedDmg = cinfo->MinRangedDmg * damageMulti;
+                maxRangedDmg = cinfo->MaxRangedDmg * damageMulti;
 
                 // attack power
-                meleeAttackPwr = cinfo->MeleeAttackPower * damagemod;
-                rangedAttackPwr = cinfo->RangedAttackPower * damagemod;
+                meleeAttackPwr = cinfo->MeleeAttackPower;
+                rangedAttackPwr = cinfo->RangedAttackPower;
             }
         }
         else
@@ -1319,8 +1319,8 @@ void Creature::SelectLevel(uint32 forcedLevel /*= USE_DEFAULT_DATABASE_LEVEL*/)
     SetFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, maxRangedDmg);
 
     // attack power
-    SetModifierValue(UNIT_MOD_ATTACK_POWER, BASE_VALUE, meleeAttackPwr);
-    SetModifierValue(UNIT_MOD_ATTACK_POWER_RANGED, BASE_VALUE, rangedAttackPwr);
+    SetModifierValue(UNIT_MOD_ATTACK_POWER, BASE_VALUE, meleeAttackPwr * damageMod);
+    SetModifierValue(UNIT_MOD_ATTACK_POWER_RANGED, BASE_VALUE, rangedAttackPwr * damageMod);
 }
 
 float Creature::_GetHealthMod(int32 Rank)
@@ -1474,8 +1474,6 @@ bool Creature::LoadFromDB(uint32 guidlow, Map* map)
 
     SetHealth(m_deathState == ALIVE ? curhealth : 0);
     SetPower(POWER_MANA, data->curmana);
-
-    SetMeleeDamageSchool(SpellSchools(GetCreatureInfo()->DamageSchool));
 
     // checked at creature_template loading
     m_defaultMovementType = MovementGeneratorType(data->movementType);
@@ -1883,7 +1881,7 @@ void Creature::SendAIReaction(AiReaction reactionType)
 void Creature::CallAssistance()
 {
     // FIXME: should player pets call for assistance?
-    if (!m_AlreadyCallAssistance && getVictim() && !isCharmed())
+    if (!m_AlreadyCallAssistance && getVictim() && !HasCharmer())
     {
         SetNoCallAssistance(true);
 
@@ -1896,7 +1894,7 @@ void Creature::CallAssistance()
 
 void Creature::CallForHelp(float fRadius)
 {
-    if (fRadius <= 0.0f || !getVictim() || IsPet() || isCharmed())
+    if (fRadius <= 0.0f || !getVictim() || IsPet() || HasCharmer())
         return;
 
     MaNGOS::CallOfHelpCreatureInRangeDo u_do(this, getVictim(), fRadius);
@@ -1934,12 +1932,12 @@ bool Creature::CanAssistTo(const Unit* u, const Unit* enemy, bool checkfaction /
     }
     else
     {
-        if (!IsFriendlyTo(u))
+        if (CanAttack(u))
             return false;
     }
 
     // skip non hostile to caster enemy creatures
-    if (enemy && !IsHostileTo(enemy))
+    if (enemy && CanAttack(enemy) && !IsEnemy(enemy))
         return false;
 
     return true;
@@ -1993,9 +1991,11 @@ bool Creature::IsOutOfThreatArea(Unit* pVictim) const
     float AttackDist = GetAttackDistance(pVictim);
     float ThreatRadius = sWorld.getConfig(CONFIG_FLOAT_THREAT_RADIUS);
 
+    float x, y, z, ori;
+    GetCombatStartPosition(x, y, z, ori);
+
     // Use AttackDistance in distance check if threat radius is lower. This prevents creature bounce in and out of combat every update tick.
-    return !pVictim->IsWithinDist3d(m_combatStartX, m_combatStartY, m_combatStartZ,
-                                    ThreatRadius > AttackDist ? ThreatRadius : AttackDist);
+    return !pVictim->IsWithinDist3d(x, y, z, ThreatRadius > AttackDist ? ThreatRadius : AttackDist);
 }
 
 CreatureDataAddon const* Creature::GetCreatureAddon() const
@@ -2099,7 +2099,7 @@ void Creature::SetInCombatWithZone()
             if (pPlayer->isGameMaster())
                 continue;
 
-            if (pPlayer->isAlive() && !IsFriendlyTo(pPlayer))
+            if (pPlayer->isAlive() && CanAttack(pPlayer))
             {
                 pPlayer->SetInCombatWith(this);
                 AddThreat(pPlayer);
@@ -2133,9 +2133,19 @@ bool Creature::MeetsSelectAttackingRequirement(Unit* pTarget, SpellEntry const* 
         if ((selectFlags & SELECT_FLAG_IN_LOS) && !IsWithinLOSInMap(pTarget))
             return false;
 
+        if (!pTarget->isAlive())
+            return false;
+
         if ((selectFlags & SELECT_FLAG_RANGE_RANGE))
         {
             float dist = GetCombatDistance(pTarget, false);
+            if (dist > params.range.maxRange || dist < params.range.minRange)
+                return false;
+        }
+
+        if ((selectFlags & SELECT_FLAG_RANGE_AOE_RANGE))
+        {
+            float dist = pTarget->GetDistance(GetPositionX(), GetPositionY(), GetPositionZ());
             if (dist > params.range.maxRange || dist < params.range.minRange)
                 return false;
         }
@@ -2492,7 +2502,7 @@ void Creature::ClearTemporaryFaction()
     // No restore if creature is charmed/possessed.
     // For later we may consider extend to restore to charmer faction where charmer is creature.
     // This can also be done by update any pet/charmed of creature at any faction change to charmer.
-    if (isCharmed())
+    if (HasCharmer())
         return;
 
     // Reset to original faction

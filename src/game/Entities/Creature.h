@@ -338,7 +338,8 @@ enum SelectFlags
     SELECT_FLAG_NOT_IN_MELEE_RANGE  = 0x080,
     SELECT_FLAG_HAS_AURA            = 0x100,
     SELECT_FLAG_NOT_AURA            = 0x200,
-    SELECT_FLAG_RANGE_RANGE         = 0x400,
+    SELECT_FLAG_RANGE_RANGE         = 0x400,                // For direct targeted abilities like charge or frostbolt
+    SELECT_FLAG_RANGE_AOE_RANGE     = 0x800,                // For AOE targeted abilities like frost nova
 };
 
 enum RegenStatsFlags
@@ -768,8 +769,8 @@ class Creature : public Unit
                 return m_charmInfo->GetCharmSpell(pos)->GetAction();
         }
 
-        void SetCombatStartPosition(float x, float y, float z) { m_combatStartX = x; m_combatStartY = y; m_combatStartZ = z; }
-        void GetCombatStartPosition(float& x, float& y, float& z) const { x = m_combatStartX; y = m_combatStartY; z = m_combatStartZ; }
+        void SetCombatStartPosition(float x, float y, float z, float o) { m_combatStartPos.x = x; m_combatStartPos.y = y; m_combatStartPos.z = z; m_combatStartPos.o = o; }
+        void GetCombatStartPosition(float& x, float& y, float& z, float& o) const { x = m_combatStartPos.x; y = m_combatStartPos.y; z = m_combatStartPos.z; o = m_combatStartPos.o; }
 
         void SetRespawnCoord(CreatureCreatePos const& pos) { m_respawnPos = pos.m_pos; }
         void SetRespawnCoord(float x, float y, float z, float ori) { m_respawnPos.x = x; m_respawnPos.y = y; m_respawnPos.z = z; m_respawnPos.o = ori; }
@@ -787,6 +788,9 @@ class Creature : public Unit
         void SetVirtualItem(VirtualItemSlot slot, uint32 item_id);
 
         void OnEventHappened(uint16 eventId, bool activate, bool resume) override { return AI()->OnEventHappened(eventId, activate, resume); }
+
+        void SetIgnoreRangedTargets(bool state) { m_ignoreRangedTargets = state; }
+        bool IsIgnoringRangedTargets() override { return m_ignoreRangedTargets; }
 
         uint32 GetDetectionRange() const override { return m_creatureInfo->Detection; }
     protected:
@@ -827,16 +831,16 @@ class Creature : public Unit
         SpellSchoolMask m_meleeDamageSchoolMask;
         uint32 m_originalEntry;
 
-        float m_combatStartX;
-        float m_combatStartY;
-        float m_combatStartZ;
-
+        Position m_combatStartPos;                          // after combat contains last position
         Position m_respawnPos;
 
         std::unique_ptr<CreatureAI> m_ai;
 
         void SetBaseWalkSpeed(float speed) override;
         void SetBaseRunSpeed(float speed) override;
+
+        // Script logic
+        bool m_ignoreRangedTargets;                         // Ignores ranged targets when picking someone to attack
     private:
         GridReference<Creature> m_gridRef;
         CreatureInfo const* m_creatureInfo;

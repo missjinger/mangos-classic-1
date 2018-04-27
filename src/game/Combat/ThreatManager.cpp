@@ -308,6 +308,14 @@ HostileReference* ThreatContainer::selectNextVictim(Creature* pAttacker, Hostile
         Unit* pTarget = pCurrentRef->getTarget();
         MANGOS_ASSERT(pTarget);                             // if the ref has status online the target must be there!
 
+        bool isInMelee = pAttacker->CanReachWithMeleeAttack(pTarget);
+        // Some bosses keep ranged targets in threat list but do not pick them with generic threat choice
+        if (pAttacker->IsIgnoringRangedTargets() && !isInMelee)
+        {
+            ++iter;
+            continue;
+        }
+
         // some units are prefered in comparison to others
         // if (checkThreatArea) consider IsOutOfThreatArea - expected to be only set for pCurrentVictim
         //     This prevents dropping valid targets due to 1.1 or 1.3 threat rule vs invalid current target
@@ -365,7 +373,7 @@ HostileReference* ThreatContainer::selectNextVictim(Creature* pAttacker, Hostile
                 }
 
                 if (pCurrentRef->getThreat() > 1.3f * pCurrentVictim->getThreat() ||
-                        (pCurrentRef->getThreat() > 1.1f * pCurrentVictim->getThreat() && pAttacker->CanReachWithMeleeAttack(pTarget)))
+                    (pCurrentRef->getThreat() > 1.1f * pCurrentVictim->getThreat() && isInMelee))
                 {
                     // implement 110% threat rule for targets in melee range
                     found = true;                           // and 130% rule for targets in ranged distances
@@ -482,6 +490,14 @@ float ThreatManager::getThreat(Unit* pVictim, bool pAlsoSearchOfflineList)
         threat = iThreatOfflineContainer.getReferenceByTarget(pVictim)->getThreat();
 
     return threat;
+}
+
+bool ThreatManager::HasThreat(Unit * pVictim, bool pAlsoSearchOfflineList)
+{
+    HostileReference* ref = iThreatContainer.getReferenceByTarget(pVictim);
+    if (!ref && pAlsoSearchOfflineList)
+        ref = iThreatOfflineContainer.getReferenceByTarget(pVictim);
+    return bool(ref);
 }
 
 //============================================================

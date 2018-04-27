@@ -14,3 +14,16 @@ UPDATE spell_template SET Attributes = Attributes | 0x20000000 WHERE id IN (2297
 -- Fixed radius for the various spells used in summoning NPCs in Nefarian encounter
 -- Value in DBC made the adds spawn anywhere instead of near their spawner NPC
 UPDATE spell_template SET EffectRadiusIndex1=7 WHERE id IN (22654, 22655, 22656, 22657, 22658, 22680);
+
+-- Fixes spell 13166 (Gnomish Battle Chicken): the summoning type was wrong
+UPDATE spell_template SET Effect1=42, EffectBasePoints1=0 WHERE id=13166;
+
+-- Fixes InterruptFlags for spell 18115 (Viewing Room Student Transform - Effect): it should not cancel on movement
+UPDATE spell_template SET InterruptFlags=0 WHERE id=18115;
+
+-- Fixes Well Fed buff for some seasonal food like Winter Veil cookies
+UPDATE spell_template SET Effect2=6, EffectDieSides2=1, EffectBaseDice2=1, EffectImplicitTargetA2=1, EffectApplyAuraName2=23, EffectAmplitude2=10000, EffectTriggerSpell2=24870 WHERE Id=24869;
+UPDATE spell_template SET EffectRealPointsPerLevel1=0.25, EffectRealPointsPerLevel2=0.25, EffectBaseDice1=0, EffectBaseDice2=0, EffectBasePoints2=0 WHERE id=24870;
+
+-- Added Ignore LoS attribute for Magic Wings spell (trigger NPC is not always in LoS of player)
+UPDATE spell_template SET AttributesEx2=AttributesEx2|0x00000004 WHERE id=24742;
