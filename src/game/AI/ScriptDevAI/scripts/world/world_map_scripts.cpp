@@ -87,7 +87,8 @@ struct world_map_kalimdor : public ScriptedMap
         m_uiOmenMoonlightTimer = 0;
         m_uiRocketsCounter = 0;
         b_isOmenSpellCreditDone = false;
-        m_luiElementalRiftGUIDs.clear();
+        for (uint8 i = 0; i < 4; ++i)
+            m_luiElementalRiftGUIDs[i].clear();
     }
 
     void OnCreatureCreate(Creature* pCreature)
