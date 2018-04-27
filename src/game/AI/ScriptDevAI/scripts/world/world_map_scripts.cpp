@@ -191,6 +191,7 @@ struct world_map_kalimdor : public ScriptedMap
                 m_luiElementalRiftGUIDs[ELEMENTAL_EARTH].push_back(pGo->GetObjectGuid());
                 break;
             case GO_WATER_ELEMENTAL_RIFT:
+                debug_log("SD2 : storing GUID %u",pGo->GetObjectGuid());
                 m_luiElementalRiftGUIDs[ELEMENTAL_WATER].push_back(pGo->GetObjectGuid());
                 break;
             case GO_FIRE_ELEMENTAL_RIFT:
