@@ -207,6 +207,10 @@ struct world_map_kalimdor : public ScriptedMap
         // Despawn all GO rifts for a given element type, erase the GUIDs for the GOs
         for (GuidList::const_iterator itr = m_luiElementalRiftGUIDs[uiIndex].begin(); itr != m_luiElementalRiftGUIDs[uiIndex].end(); ++itr)
         {
+            if (!instance)
+            {
+                debug_log("SD2: no instance found with uiIndex: %u for guid %u", uiIndex, uint32(*itr)); 
+            }
             if (GameObject* pRift = instance->GetGameObject(*itr))
             {
                 m_luiElementalRiftGUIDs[uiIndex].remove(*itr);
