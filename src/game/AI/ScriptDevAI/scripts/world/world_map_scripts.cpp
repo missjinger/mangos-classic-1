@@ -207,7 +207,7 @@ struct world_map_kalimdor : public ScriptedMap
     {
         // Despawn all GO rifts for a given element type, erase the GUIDs for the GOs
    //     for (GuidList::const_iterator itr = m_luiElementalRiftGUIDs[uiIndex].begin(); itr != m_luiElementalRiftGUIDs[uiIndex].end(); ++itr)
-        for (auto guid : GuidList)
+        for (auto guid : m_luiElementalRiftGUIDs[uiIndex])
         {
             if (!instance)
             {
