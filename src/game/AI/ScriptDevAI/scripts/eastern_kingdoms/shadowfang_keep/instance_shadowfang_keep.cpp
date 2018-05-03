@@ -55,7 +55,7 @@ void instance_shadowfang_keep::OnCreatureCreate(Creature* pCreature)
         case NPC_BLEAK_WORG:
         case NPC_SLAVERING_WORG:
             // Only store the wolves/worgs that are static spawn on the top level of the instance
-            if (pCreature->GetPositionZ() > nandosMovement.fZ && !pCreature->IsSummoned())
+            if (pCreature->GetPositionZ() > nandosMovement.fZ && !pCreature->IsTemporarySummon())
                 m_lNandosWolvesGuids.push_back(pCreature->GetObjectGuid());
             break;
         default:
