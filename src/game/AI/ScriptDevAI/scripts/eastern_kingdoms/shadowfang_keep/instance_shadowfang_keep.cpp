@@ -55,8 +55,12 @@ void instance_shadowfang_keep::OnCreatureCreate(Creature* pCreature)
         case NPC_BLEAK_WORG:
         case NPC_SLAVERING_WORG:
             // Only store the wolves/worgs that are static spawn on the top level of the instance
+            debug_log("SD2 creating wolf/worg with entry %u at Z position %f", pCreature->GetEntry(), pCreature->GetPositionZ());
             if (pCreature->GetPositionZ() > nandosMovement.fZ && !pCreature->IsTemporarySummon())
+            {
                 m_lNandosWolvesGuids.push_back(pCreature->GetObjectGuid());
+                debug_log("SD2 storing NPC %u in Nandos' pack", pCreature->GetEntry());
+            }
             break;
         default:
             return;
@@ -74,7 +78,7 @@ void instance_shadowfang_keep::OnCreatureDeath(Creature* pCreature)
         case NPC_SLAVERING_WORG:
             if (m_lNandosWolvesGuids.empty())
                     return;
-
+            debug_log("SD2 death of wolf/worg NPC with %u", pCreature->GetEntry());
             m_lNandosWolvesGuids.remove(pCreature->GetObjectGuid());
             // If all wolves are dead, make Wolf Master Nandos engage in combat
             if (Creature* nandos = GetSingleCreatureFromStorage(NPC_MASTER_NANDOS))
