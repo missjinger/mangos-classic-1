@@ -85,6 +85,8 @@ void instance_shadowfang_keep::OnCreatureDeath(Creature* pCreature)
             {
                 if (Creature* nandos = GetSingleCreatureFromStorage(NPC_MASTER_NANDOS))
                 {
+                    if (nandos->isInCombat())   // Wolf Master Nandos already joined the fight: no need to go further
+                        return;
                     DoScriptText(YELL_PACK_DEAD, nandos);
                     nandos->SetWalk(false);
                     nandos->GetMotionMaster()->MovePoint(0, nandosMovement.fX, nandosMovement.fY, nandosMovement.fZ);
