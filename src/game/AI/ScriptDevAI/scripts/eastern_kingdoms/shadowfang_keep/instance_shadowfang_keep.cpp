@@ -81,11 +81,14 @@ void instance_shadowfang_keep::OnCreatureDeath(Creature* pCreature)
             debug_log("SD2 death of wolf/worg NPC with %u", pCreature->GetEntry());
             m_lNandosWolvesGuids.remove(pCreature->GetObjectGuid());
             // If all wolves are dead, make Wolf Master Nandos engage in combat
-            if (Creature* nandos = GetSingleCreatureFromStorage(NPC_MASTER_NANDOS))
+            if (m_lNandosWolvesGuids.empty())
             {
-                DoScriptText(YELL_PACK_DEAD, nandos);
-                nandos->SetWalk(false);
-                nandos->GetMotionMaster()->MovePoint(0, nandosMovement.fX, nandosMovement.fY, nandosMovement.fZ);
+                if (Creature* nandos = GetSingleCreatureFromStorage(NPC_MASTER_NANDOS))
+                {
+                    DoScriptText(YELL_PACK_DEAD, nandos);
+                    nandos->SetWalk(false);
+                    nandos->GetMotionMaster()->MovePoint(0, nandosMovement.fX, nandosMovement.fY, nandosMovement.fZ);
+                }
             }
             break;
         default:
