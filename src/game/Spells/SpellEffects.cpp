@@ -1023,6 +1023,13 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     return;
                 }
+                case 24796:                                 // Summon Demented Druid Spirit
+                {
+                    if (unitTarget && unitTarget->GetTypeId() == TYPEID_PLAYER)
+                        m_caster->CastSpell(unitTarget, 24795, TRIGGERED_OLD_TRIGGERED);
+
+                    return;
+                }
                 case 26080:                                 // Stinger Charge Primer
                 {
                     if (unitTarget->HasAura(26078))
@@ -1045,9 +1052,24 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 }
                 case 24781:                                 // Dream Fog
                 {
-                    // TODO Note: Should actually not only AttackStart, but fixate on the target
+                    // Let the current target be and move to the new one
+                    if (m_caster->getVictim())
+                    {
+                        m_caster->DeleteThreatList();
+                        m_caster->AttackStop(true, false, false);
+                    }
                     if (unitTarget && m_caster->AI())
                         m_caster->AI()->AttackStart(unitTarget);
+
+                    return;
+                }
+                case 24886:                                 // Despawn Taerar Shades
+                {
+                    if (unitTarget && unitTarget->GetEntry() == 15302)
+                    {
+                        ((Creature*)unitTarget)->ForcedDespawn();
+                        ((Creature*)unitTarget)->RemoveFromWorld();
+                    }
 
                     return;
                 }
@@ -5370,7 +5392,9 @@ void Spell::EffectTransmitted(SpellEffectIndex eff_idx)
         {
             if (m_caster->GetTypeId() == TYPEID_PLAYER)
             {
-                pGameObj->AddUniqueUse((Player*)m_caster);
+                Player* player = (Player*)m_caster;
+                pGameObj->AddUniqueUse(player);
+                pGameObj->SetActionTarget(player->GetSelectionGuid());
                 m_caster->AddGameObject(pGameObj);          // will removed at spell cancel
             }
             break;
