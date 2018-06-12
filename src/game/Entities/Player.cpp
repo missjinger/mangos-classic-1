@@ -2105,7 +2105,7 @@ struct SetGameMasterOnHelper
     void operator()(Unit* unit) const
     {
         unit->setFaction(35);
-        unit->getHostileRefManager().setOnlineOfflineState(false);
+        unit->getHostileRefManager().updateOnlineOfflineState(false);
     }
 };
 
@@ -2115,7 +2115,7 @@ struct SetGameMasterOffHelper
     void operator()(Unit* unit) const
     {
         unit->setFaction(faction);
-        unit->getHostileRefManager().setOnlineOfflineState(true);
+        unit->getHostileRefManager().updateOnlineOfflineState(true);
     }
     uint32 faction;
 };
@@ -2135,7 +2135,7 @@ void Player::SetGameMaster(bool on)
         SetPvPFreeForAll(false);
         UpdatePvPContested(false, true);
 
-        getHostileRefManager().setOnlineOfflineState(false);
+        getHostileRefManager().updateOnlineOfflineState(false);
         CombatStopWithPets();
     }
     else
@@ -2155,7 +2155,7 @@ void Player::SetGameMaster(bool on)
         // restore FFA PvP area state, remove not allowed for GM mounts
         UpdateArea(m_areaUpdateId);
 
-        getHostileRefManager().setOnlineOfflineState(true);
+        getHostileRefManager().updateOnlineOfflineState(true);
     }
 
     m_camera.UpdateVisibilityForOwner();
@@ -2186,22 +2186,6 @@ void Player::SetGMVisible(bool on)
 
         SetVisibility(VISIBILITY_OFF);
     }
-}
-
-bool Player::IsGroupVisibleFor(Player* p) const
-{
-    switch (sWorld.getConfig(CONFIG_UINT32_GROUP_VISIBILITY))
-    {
-        default: return IsInSameGroupWith(p);
-        case 1:  return IsInSameRaidWith(p);
-        case 2:  return GetTeam() == p->GetTeam();
-    }
-}
-
-bool Player::IsInSameGroupWith(Player const* p) const
-{
-    return (p == this || (GetGroup() != nullptr &&
-                          GetGroup()->SameSubGroup(this, p)));
 }
 
 ///- If the player is invited, remove him. If the group if then only 1 person, disband the group.
@@ -16486,7 +16470,7 @@ void Player::OnTaxiFlightSplineStart(const TaxiPathNodeEntry* node)
     if (const TaxiPathEntry* path = sTaxiPathStore.LookupEntry(node->path))
         Mount(m_taxiTracker.GetMountDisplayId());
 
-    getHostileRefManager().setOnlineOfflineState(false);
+    getHostileRefManager().updateOnlineOfflineState(false);
 
     // Bugcheck: container continuity error
     MANGOS_ASSERT(m_taxiTracker.SetState(Taxi::TRACKER_FLIGHT));
@@ -16496,7 +16480,7 @@ void Player::OnTaxiFlightSplineEnd()
 {
     Unmount();
 
-    getHostileRefManager().setOnlineOfflineState(true);
+    getHostileRefManager().updateOnlineOfflineState(true);
 
     // Note: only gets set by itself when container does not end up empty
     m_taxiTracker.SetState(Taxi::TRACKER_TRANSFER);
@@ -16995,7 +16979,7 @@ bool Player::IsVisibleInGridForPlayer(Player* pl) const
         return true;
 
     // player see dead player/ghost from own group/raid
-    if (IsInSameRaidWith(pl))
+    if (IsInGroup(pl))
         return true;
 
     // Live player see live player or dead player with not realized corpse
