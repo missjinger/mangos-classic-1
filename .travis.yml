@@ -47,9 +47,6 @@ env:
   - BUILD_TYPE=Release
   - BUILD_TYPE=Release PCH_FLAG=ON
 
-services:
-  - mysql
-
 matrix:
   exclude:
     - os: osx
@@ -73,6 +70,7 @@ addons:
       - libboost-program-options1.55-dev
       - libboost-thread1.55-dev
       - libboost-regex1.55-dev
+      - libmysqlclient-dev
 
 # overwrite GCC version for GCC build only
 before_install:
