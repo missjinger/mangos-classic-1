@@ -47,6 +47,9 @@ env:
   - BUILD_TYPE=Release
   - BUILD_TYPE=Release PCH_FLAG=ON
 
+services:
+  - mysql
+
 matrix:
   exclude:
     - os: osx
