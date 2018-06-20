@@ -16,8 +16,8 @@
 
 /* ScriptData
 SDName: instance_dire_maul
-SD%Complete: 30
-SDComment: Basic Support - Most events and quest-related stuff missing
+SD%Complete: 85
+SDComment: Ogre costume suit missing for Tribute Run
 SDCategory: Dire Maul
 EndScriptData
 
@@ -574,6 +574,173 @@ InstanceData* GetInstanceData_instance_dire_maul(Map* pMap)
     return new instance_dire_maul(pMap);
 }
 
+/*###############
+## go_fixed_trap
+################*/
+
+struct go_ai_fixed_trap : public GameObjectAI
+{
+    go_ai_fixed_trap(GameObject* go) : GameObjectAI(go), m_triggered(false) {}
+
+    bool m_triggered;
+
+    void UpdateAI(const uint32 uiDiff) override
+    {
+        if (!m_triggered && m_go->isSpawned())
+        {
+            Creature* slipkik = GetClosestCreatureWithEntry(m_go, NPC_GUARD_SLIPKIK, 2.5f);
+
+            if (slipkik)
+            {
+                m_go->Use(slipkik);
+                m_triggered = true;
+            }
+        }
+    }
+};
+
+
+GameObjectAI* GetAI_go_fixed_trap(GameObject* go)
+{
+    return new go_ai_fixed_trap(go);
+}
+
+enum
+{
+    SPELL_SHIELD_CHARGE     = 15749,
+    SPELL_STRIKE            = 15580,
+    SPELL_SHIELD_BASH       = 11972,
+    SPELL_KNOCK_AWAY        = 10101,
+    SPELL_FRENZY            = 8269,
+
+    YELL_ENRAGE             = -1429004,
+};
+
+/*####################
+## npc_guard_slip_kik
+#####################*/
+
+struct npc_guard_slip_kikAI : public ScriptedAI
+{
+    npc_guard_slip_kikAI(Creature* pCreature) : ScriptedAI(pCreature) { Reset(); }
+
+    uint32 m_strikeTimer;
+    uint32 m_shieldBashTimer;
+    uint32 m_knockAwayTimer;
+    uint32 m_interruptTimer;
+    bool m_isEnraged;
+    bool m_isTrapped;
+
+    void Reset() override
+    {
+        m_strikeTimer = urand(6000, 16000);
+        m_shieldBashTimer = urand(11000, 15000);
+        m_knockAwayTimer = urand(13000, 19000);
+        m_interruptTimer = 0;
+        m_isTrapped = false;
+        m_isEnraged = false;
+    }
+
+    void Aggro (Unit* who) override
+    {
+        DoCastSpellIfCan(who, SPELL_SHIELD_CHARGE);
+    }
+
+    void EnterEvadeMode() override
+    {
+        if (m_isTrapped)
+        {
+            m_creature->DeleteThreatList();
+            m_creature->CombatStop(true);
+
+            // only alive creatures that are not on transport can return to home position
+//            if (GetReactState() != REACT_PASSIVE && m_creature->isAlive())
+//                m_creature->GetMotionMaster()->MoveTargetedHome();
+
+            m_creature->SetLootRecipient(nullptr);
+        }
+        else
+            ScriptedAI::EnterEvadeMode();
+
+    }
+
+    void SpellHit(Unit* /* pCaster */, const SpellEntry* pSpell) override
+    {
+        if (pSpell->Id == SPELL_ICE_LOCK)
+            m_isTrapped = true;
+
+        if (m_isTrapped)
+            EnterEvadeMode();
+    }
+
+    void DamageTaken(Unit* /*pDoneBy*/, uint32& uiDamage, DamageEffectType /*damagetype*/) override
+    {
+        if (m_isTrapped)
+        {
+            uiDamage = 0;
+            EnterEvadeMode();
+        }
+    }
+
+    void UpdateAI(const uint32 uiDiff) override
+    {
+        if (!m_creature->SelectHostileTarget() || !m_creature->getVictim() || m_isTrapped)
+            return;
+
+        if (m_interruptTimer < uiDiff)
+        {
+            if (m_creature->getVictim()->IsNonMeleeSpellCasted(true) && DoCastSpellIfCan(m_creature->getVictim(), SPELL_SHIELD_BASH))
+                m_interruptTimer = urand(8000, 12000);
+        }
+        else
+            m_interruptTimer -= uiDiff;
+
+        if (m_creature->GetHealthPercent() < 40.0f && !m_isEnraged)
+        {
+            DoScriptText(YELL_ENRAGE, m_creature);
+            DoCastSpellIfCan(m_creature, SPELL_FRENZY, CAST_TRIGGERED);
+            m_isEnraged = true;
+        }
+
+        // Strike timer
+        if (m_strikeTimer < uiDiff)
+        {
+            if (DoCastSpellIfCan(m_creature->getVictim(), SPELL_STRIKE) == CAST_OK)
+                m_strikeTimer = urand(6200, 16500);
+        }
+        else
+            m_strikeTimer -= uiDiff;
+
+        // Shield Bash timer
+        if (m_shieldBashTimer < uiDiff)
+        {
+            if (DoCastSpellIfCan(m_creature->getVictim(), SPELL_SHIELD_BASH) == CAST_OK)
+                m_shieldBashTimer = urand(11000, 15000);
+        }
+        else
+            m_shieldBashTimer -= uiDiff;
+
+        // Knock Away timer
+        if (m_knockAwayTimer < uiDiff)
+        {
+            if (Unit* target = m_creature->SelectAttackingTarget(ATTACKING_TARGET_RANDOM, 0))
+            {
+                if (DoCastSpellIfCan(target, SPELL_KNOCK_AWAY) == CAST_OK)
+                    m_knockAwayTimer = urand(19000, 32000);
+            }
+        }
+        else
+            m_knockAwayTimer -= uiDiff;
+
+        DoMeleeAttackIfReady();
+    }
+};
+
+CreatureAI* GetAI_npc_guard_slip_kik(Creature* pCreature)
+{
+    return new npc_guard_slip_kikAI(pCreature);
+}
+
 void AddSC_instance_dire_maul()
 {
     Script* pNewScript;
@@ -581,5 +748,15 @@ void AddSC_instance_dire_maul()
     pNewScript = new Script;
     pNewScript->Name = "instance_dire_maul";
     pNewScript->GetInstanceData = &GetInstanceData_instance_dire_maul;
+    pNewScript->RegisterSelf();
+
+    pNewScript = new Script;
+    pNewScript->Name = "go_fixed_trap";
+    pNewScript->GetGameObjectAI = &GetAI_go_fixed_trap;
+    pNewScript->RegisterSelf();
+
+    pNewScript = new Script;
+    pNewScript->Name = "npc_guard_slip_kik";
+    pNewScript->GetAI = &GetAI_npc_guard_slip_kik;
     pNewScript->RegisterSelf();
 }

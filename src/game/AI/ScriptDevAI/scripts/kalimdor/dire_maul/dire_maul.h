@@ -89,6 +89,8 @@ enum
 
     FACTION_HOSTILE             = 14,
     FACTION_FRIENDLY            = 35,
+
+    SPELL_ICE_LOCK              = 22856,
 };
 
 static const float afMizzleSpawnLoc[4] = {683.296f, 484.384f, 29.544f, 0.0174f};
